@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <!-- OpenStay Logo: Two overlapping dark green squares forming a step/staircase shape -->
+  <rect x="176" y="16" width="264" height="264" rx="16" fill="#1B4332"/>
+  <rect x="72" y="232" width="264" height="264" rx="16" fill="#1B4332"/>
+</svg>

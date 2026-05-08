@@ -1,0 +1,436 @@
+// safestay-backend/src/database/prisma/schema.prisma
+
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-1.1.x", "debian-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────────────────────
+// ENUMS
+// ─────────────────────────────────────────────
+
+enum PortalType {
+  HOTEL
+  POLICE
+}
+
+enum RoomStatus {
+  AVAILABLE
+  OCCUPIED
+  MAINTENANCE
+}
+
+enum GuestType {
+  DOMESTIC
+  INTERNATIONAL
+}
+
+enum CaseStatus {
+  WANTED
+  ARRESTED
+  ABSCONDING
+  RELEASED
+  IN_CUSTODY
+  UNDER_INVESTIGATION
+  PAROLE
+}
+
+enum ThreatLevel {
+  CRITICAL
+  HIGH
+  MEDIUM
+  LOW
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+}
+
+enum MatchStatus {
+  PENDING_REVIEW
+  CONFIRMED
+  DISMISSED
+}
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+  LOGIN
+  LOGOUT
+  EXPORT
+  VERIFICATION_RUN
+}
+
+// ─────────────────────────────────────────────
+// JURISDICTION HIERARCHY
+// ─────────────────────────────────────────────
+
+model State {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  code      String   @unique // e.g., "TG" for Telangana
+  createdAt DateTime @default(now())
+  zones     Zone[]
+}
+
+model Zone {
+  id      String  @id @default(uuid())
+  name    String
+  stateId String
+  state   State   @relation(fields: [stateId], references: [id])
+  ranges  Range[]
+
+  @@unique([name, stateId])
+}
+
+model Range {
+  id        String     @id @default(uuid())
+  name      String
+  zoneId    String
+  zone      Zone       @relation(fields: [zoneId], references: [id])
+  districts District[]
+
+  @@unique([name, zoneId])
+}
+
+model District {
+  id       String    @id @default(uuid())
+  name     String
+  rangeId  String
+  range    Range     @relation(fields: [rangeId], references: [id])
+  stations Station[]
+
+  @@unique([name, rangeId])
+}
+
+model Station {
+  id                   String            @id @default(uuid())
+  name                 String
+  districtId           String
+  district             District          @relation(fields: [districtId], references: [id])
+  // computed path stored for fast row-level security lookups
+  jurisdictionPath     String // format: "stateId/zoneId/rangeId/districtId/stationId"
+  policeUsers          PoliceUser[]
+  hotels               Hotel[] // Hotels mapped secretly to this station
+  firs                 CriminalProfile[] @relation("FIRStation")
+  // V2: Alert dispatch contacts
+  alertEmailContacts   String[]          @default([])
+  alertWhatsappNumbers String[]          @default([])
+  alertsEnabled        Boolean           @default(true)
+
+  @@unique([name, districtId])
+  // Prefix matching on jurisdictionPath is the hot path for police jurisdiction
+  // scoping in every read query (verification.service, police.controller, …).
+  @@index([jurisdictionPath])
+}
+
+// ─────────────────────────────────────────────
+// HOTEL DOMAIN
+// ─────────────────────────────────────────────
+
+model Hotel {
+  id               String              @id @default(uuid())
+  name             String
+  email            String              @unique
+  passwordHash     String
+  contactNumber    String?
+  address          String?
+  licenseNumber    String?
+  geoLat           Float?
+  geoLng           Float?
+  totalFloors      Int
+  roomsPerFloor    Int
+  maxGuestsPerRoom Int                 @default(3)
+  isActive         Boolean             @default(true)
+  // Secret backend mapping — NEVER expose to hotel frontend
+  nearestStationId String?
+  nearestStation   Station?            @relation(fields: [nearestStationId], references: [id])
+  jurisdictionPath String? // Mirrors nearestStation.jurisdictionPath
+  rooms            Room[]
+  guests           Guest[]
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+  deletedAt        DateTime?
+  refreshTokens    HotelRefreshToken[]
+
+  // Listing and police-dashboard queries always filter by isActive / deletedAt;
+  // verification workers look up hotels by jurisdictionPath prefix.
+  @@index([isActive, deletedAt])
+  @@index([jurisdictionPath])
+  @@index([nearestStationId])
+}
+
+model HotelRefreshToken {
+  id        String    @id @default(uuid())
+  token     String    @unique
+  hotelId   String
+  hotel     Hotel     @relation(fields: [hotelId], references: [id])
+  expiresAt DateTime
+  createdAt DateTime  @default(now())
+  revokedAt DateTime?
+
+  @@index([hotelId, revokedAt])
+  @@index([expiresAt])
+}
+
+model Room {
+  id         String     @id @default(uuid())
+  hotelId    String
+  hotel      Hotel      @relation(fields: [hotelId], references: [id])
+  floor      Int
+  roomNumber String // e.g., "301"
+  status     RoomStatus @default(AVAILABLE)
+  category   String // Single, Double, Suite, etc.
+  maxGuests  Int        @default(3)
+  guests     Guest[]
+  createdAt  DateTime   @default(now())
+  updatedAt  DateTime   @updatedAt
+
+  @@unique([hotelId, roomNumber])
+  // Dashboard and availability queries filter rooms by (hotelId, status).
+  @@index([hotelId, status])
+}
+
+model Guest {
+  id                   String       @id @default(uuid())
+  hotelId              String
+  hotel                Hotel        @relation(fields: [hotelId], references: [id])
+  roomId               String
+  room                 Room         @relation(fields: [roomId], references: [id])
+  // Identity
+  fullName             String
+  age                  Int
+  gender               Gender
+  phoneNumber          String
+  fatherName           String?
+  email                String?
+  panCard              String?
+  address              String?
+  guestType            GuestType    @default(DOMESTIC)
+  // Domestic — Aadhaar is NEVER stored in plaintext
+  aadhaarEncrypted     String? // AES-256-GCM encrypted: iv:authTag:ciphertext (hex)
+  aadhaarHash          String? // SHA-256 of plaintext Aadhaar — used ONLY for match-scoring
+  // International
+  passportNumber       String?
+  // Government IDs (added alongside Aadhaar for richer matching)
+  voterId              String?
+  drivingLicense       String?
+  // International — passport metadata
+  passportNationality  String?
+  passportPlaceOfIssue String?
+  passportDateOfIssue  DateTime?
+  passportExpiry       DateTime?
+  // International — visa details
+  visaNumber           String?
+  visaType             String?
+  visaValidTill        DateTime?
+  formCPath            String? // File path to Form C upload
+  // Media
+  guestPhotoPath       String? // Required: face photo
+  idDocumentPath       String? // Required: ID document photo
+  // Stay
+  checkInDate          DateTime
+  expectedCheckout     DateTime?
+  checkOutDate         DateTime?
+  isActive             Boolean      @default(true) // true = currently checked in
+  // V2: OCR & age estimation cache
+  ocrConfidence        Float?
+  ocrPlatform          String? // "GCV" | "TEXTRACT" | null
+  estimatedAgeRange    Json? // { low: 28, high: 38 } from face analysis
+  ageEstimatedAt       DateTime?
+  createdAt            DateTime     @default(now())
+  updatedAt            DateTime     @updatedAt
+  deletedAt            DateTime?
+  matchAlerts          MatchAlert[]
+
+  // Hot paths:
+  //  - active-guest listings & dashboards filter by (hotelId, isActive)
+  //  - police views filter by checkInDate range and isActive
+  //  - verification workers join on aadhaarHash / passportNumber
+  //  - cleanup worker scans inactive guests by checkInDate cutoff
+  @@index([hotelId, isActive])
+  @@index([isActive, checkInDate])
+  @@index([checkInDate])
+  @@index([aadhaarHash])
+  @@index([passportNumber])
+  @@index([voterId])
+  @@index([drivingLicense])
+  @@index([roomId])
+}
+
+// ─────────────────────────────────────────────
+// POLICE DOMAIN
+// ─────────────────────────────────────────────
+
+// 14-level RBAC rank table (seed data)
+model PoliceRank {
+  id          String       @id @default(uuid())
+  level       Int          @unique // 1 (top) to 14 (bottom)
+  title       String       @unique // e.g., "Director General of Police"
+  description String?
+  policeUsers PoliceUser[]
+}
+
+model PoliceUser {
+  id               String               @id @default(uuid())
+  badgeId          String               @unique // Unique badge number — used as login ID
+  passwordHash     String? // Optional: passwordless login flow uses phoneNumber OTP
+  phoneNumber      String? // Used by passwordless OTP login
+  fullName         String
+  email            String?              @unique
+  rankId           String
+  rank             PoliceRank           @relation(fields: [rankId], references: [id])
+  stationId        String
+  station          Station              @relation(fields: [stationId], references: [id])
+  jurisdictionPath String // Copied from station at creation time
+  isActive         Boolean              @default(true)
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
+  deletedAt        DateTime?
+  refreshTokens    PoliceRefreshToken[]
+  criminalProfiles CriminalProfile[]    @relation("EnteredBy")
+
+  // Lookup paths: badgeId login (already unique), phone OTP login, station dashboards.
+  @@index([phoneNumber])
+  @@index([stationId, isActive])
+  @@index([jurisdictionPath])
+}
+
+model PoliceRefreshToken {
+  id           String     @id @default(uuid())
+  token        String     @unique
+  policeUserId String
+  policeUser   PoliceUser @relation(fields: [policeUserId], references: [id])
+  expiresAt    DateTime
+  createdAt    DateTime   @default(now())
+  revokedAt    DateTime?
+
+  @@index([policeUserId, revokedAt])
+  @@index([expiresAt])
+}
+
+model CriminalProfile {
+  id               String       @id @default(uuid())
+  // Identity
+  fullName         String
+  aliases          String[] // Array of known aliases
+  gender           Gender
+  complexion       String?
+  dateOfBirth      DateTime?
+  approximateAge   Int?
+  heightCm         Int?
+  weightKg         Int?
+  identifyingMarks String?
+  photoPath        String?
+  // Legal
+  caseStatus       CaseStatus
+  threatLevel      ThreatLevel
+  crimeType        String
+  firNumbers       String[]
+  warrantNumber    String?
+  crimeDescription String?
+  // Documents — Aadhaar is NEVER stored in plaintext
+  aadhaarEncrypted String? // AES-256-GCM encrypted: iv:authTag:ciphertext (hex)
+  aadhaarHash      String? // SHA-256 of plaintext Aadhaar — used ONLY for match-scoring
+  panNumber        String?
+  passportNumber   String?
+  voterId          String?
+  drivingLicense   String?
+  // Contact
+  phones           String[]
+  emails           String[]
+  lastKnownAddress String?
+  // Jurisdiction
+  firStationId     String
+  firStation       Station      @relation("FIRStation", fields: [firStationId], references: [id])
+  jurisdictionPath String // Copied from firStation
+  enteredById      String
+  enteredBy        PoliceUser   @relation("EnteredBy", fields: [enteredById], references: [id])
+  isActive         Boolean      @default(true)
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+  deletedAt        DateTime?
+  matchAlerts      MatchAlert[]
+
+  // Hot paths:
+  //  - verification workers filter by (isActive, caseStatus, jurisdictionPath prefix)
+  //  - identity matchers look up by aadhaarHash / passportNumber / voterId /
+  //    drivingLicense — all already indexed in DB via the 2026-04-12 migration.
+  @@index([isActive, caseStatus])
+  @@index([jurisdictionPath])
+  @@index([aadhaarHash])
+  @@index([passportNumber])
+  @@index([voterId])
+  @@index([drivingLicense])
+  @@index([firStationId])
+}
+
+// ─────────────────────────────────────────────
+// VERIFICATION & ALERT DOMAIN
+// ─────────────────────────────────────────────
+
+model MatchAlert {
+  id                 String          @id @default(uuid())
+  guestId            String
+  guest              Guest           @relation(fields: [guestId], references: [id])
+  criminalId         String
+  criminal           CriminalProfile @relation(fields: [criminalId], references: [id])
+  matchScore         Float // 0.00 to 1.00
+  matchBreakdown     Json // { name: 0.5, aadhaar: 1.0, phone: 0.0 }
+  status             MatchStatus     @default(PENDING_REVIEW)
+  triggeredBy        String // "MANUAL" | "INJECTION" | "SWEEP"
+  reviewedByPoliceId String?
+  reviewNotes        String?
+  // V2: Dispatch tracking
+  dispatchStatus     String? // "PENDING" | "SENT" | "FAILED"
+  dispatchedAt       DateTime?
+  dispatchError      String?
+  dispatchToStations String[]        @default([])
+  // V2: Conflict flag
+  conflictDetected   Boolean         @default(false)
+  createdAt          DateTime        @default(now())
+  updatedAt          DateTime        @updatedAt
+
+  // Verification workers (sweep/injection/verification.service) look up
+  // "do we already have an alert for this pair?" on every single iteration
+  // of the O(C × G) loop. Promoting this to a composite unique constraint
+  // lets us replace findFirst+create/update with a single upsert and makes
+  // deduplication a DB-level invariant.
+  @@unique([guestId, criminalId])
+  // Police dashboard filters: pending queues, threat scoring, time windows.
+  @@index([status, matchScore])
+  @@index([status, createdAt])
+  @@index([criminalId])
+  @@index([guestId])
+}
+
+// ─────────────────────────────────────────────
+// AUDIT LOG
+// ─────────────────────────────────────────────
+
+model AuditLog {
+  id           String      @id @default(uuid())
+  actorId      String // policeUserId or hotelId
+  actorType    PortalType
+  action       AuditAction
+  resourceType String // e.g., "Guest", "CriminalProfile"
+  resourceId   String?
+  metadata     Json? // Any extra context
+  ipAddress    String?
+  userAgent    String?
+  createdAt    DateTime    @default(now())
+
+  // NOTE: No Prisma relation on actorId — it can be either a hotelId or policeUserId.
+  // Use manual lookups when resolving actor identity (see BUG-01 fix notes in README).
+  @@index([actorId, createdAt])
+  @@index([resourceType, createdAt])
+  @@index([createdAt])
+}

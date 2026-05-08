@@ -1,0 +1,42 @@
+version: '3.8'
+
+# Local development services for SafeStay backend.
+# Uses ports 5433 (postgres) and 6381 (redis) to avoid conflicts
+# with any existing local PostgreSQL / Redis / other Docker projects.
+#
+# Run:  docker-compose up -d
+# Stop: docker-compose down
+
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: safestay-postgres
+    environment:
+      POSTGRES_USER: safestay
+      POSTGRES_PASSWORD: safestay123
+      POSTGRES_DB: safestay_db
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U safestay -d safestay_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    container_name: safestay-redis
+    ports:
+      - "6381:6379"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+volumes:
+  postgres_data:

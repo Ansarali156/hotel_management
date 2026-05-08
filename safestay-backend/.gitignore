@@ -1,0 +1,34 @@
+# Environment — MUST NOT be committed
+.env
+.env.local
+.env.*.local
+
+# Build output
+dist/
+build/
+
+# Dependencies
+node_modules/
+
+# Logs
+logs/
+*.log
+
+# Uploads (user data — never commit)
+uploads/
+
+# Prisma
+src/database/migrations/
+
+# Coverage
+coverage/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo

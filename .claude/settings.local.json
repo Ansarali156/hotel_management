@@ -1,0 +1,41 @@
+{
+  "permissions": {
+    "allow": [
+      "Read(//c/Users/hp/AppData/Roaming/Claude/local-agent-mode-sessions/skills-plugin/2ec0ced2-2cf3-4871-bf4f-e30508fd58ce/ec7d2fa8-89ab-4441-b87c-dc91ff2cf54b/skills/docx/**)",
+      "Bash(pandoc --track-changes=all \"F:/PHM/SafeStay_BugFixGuide.docx\" -o output.md)",
+      "Bash(python \"C:\\\\Users\\\\hp\\\\AppData\\\\Roaming\\\\Claude\\\\local-agent-mode-sessions\\\\skills-plugin\\\\2ec0ced2-2cf3-4871-bf4f-e30508fd58ce\\\\ec7d2fa8-89ab-4441-b87c-dc91ff2cf54b\\\\skills\\\\docx\\\\scripts\\\\office\\\\unpack.py\" \"F:/PHM/SafeStay_BugFixGuide.docx\" \"F:/PHM/bugfix_unpacked/\")",
+      "Bash(pip install:*)",
+      "Bash(python -c \":*)",
+      "Bash(npm --version)",
+      "Bash(psql --version)",
+      "Bash(redis-server --version)",
+      "Bash(where psql:*)",
+      "Bash(where redis-server:*)",
+      "Bash(where redis-cli:*)",
+      "Bash(powershell -Command \"Get-Service -Name *postgresql* -ErrorAction SilentlyContinue | Select-Object Name,Status; Get-Service -Name *redis* -ErrorAction SilentlyContinue | Select-Object Name,Status\")",
+      "Bash(powershell -Command \"Get-Command psql -ErrorAction SilentlyContinue; ls ''C:\\\\Program Files\\\\PostgreSQL'' -ErrorAction SilentlyContinue; ls ''C:\\\\Program Files\\\\Redis'' -ErrorAction SilentlyContinue; ls ''C:\\\\Users\\\\hp\\\\AppData\\\\Local'' -ErrorAction SilentlyContinue | Where-Object Name -match ''post|redis''\")",
+      "Bash(npm install:*)",
+      "Bash(node -e \"const a = require\\(''argon2''\\); console.log\\(''argon2 ok''\\);\")",
+      "Bash(npx ts-jest:*)",
+      "Bash(node -e \"require\\(''''./node_modules/ts-jest''''\\)\")",
+      "Bash(npx jest:*)",
+      "Bash(node -e \"const a = require\\(''@node-rs/argon2''\\); console.log\\(''ok'', typeof a.hash\\);\")",
+      "Bash(npx prisma:*)",
+      "Bash(claude mcp:*)",
+      "WebSearch",
+      "WebFetch(domain:stitch.withgoogle.com)",
+      "WebFetch(domain:github.com)",
+      "Bash(export CLAUDE_CODE_GIT_BASH_PATH=\"c:/Program Files/Git/bin/bash.exe\")",
+      "Bash(git --version)",
+      "Bash(git config:*)",
+      "Bash(where git.exe)",
+      "Bash(node -e ':*)",
+      "Bash(npm audit:*)",
+      "Bash(grep -E \"\\\\.\\(env|ts|js|json\\)$\")",
+      "Bash(echo \"EXIT:$?\")",
+      "Bash(pg_isready)",
+      "Bash(docker --version)",
+      "Bash(docker-compose up:*)"
+    ]
+  }
+}

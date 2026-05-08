@@ -1,0 +1,94 @@
+# Environment — MUST NOT be committed
+.env
+.env.local
+.env.*.local
+render_secrets.txt
+render_secrets*.txt
+
+# Build output
+dist/
+build/
+
+# Dependencies
+node_modules/
+
+# Logs
+logs/
+*.log
+
+# Uploads (user data — never commit)
+uploads/
+
+# Prisma
+src/database/migrations/
+
+# Coverage
+coverage/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Wibey / test orchestrator local state
+.wibey-test/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+~$*
+.claude.zip
+
+#Ignore vscode AI rules
+.github/instructions/codacy.instructions.md
+qa-screenshots/
+
+# --- Cleanup added by jarvis ---
+# Build artifacts (regenerable)
+safestay-backend/dist/
+safestay-frontend/dist/
+
+# Extracted .docx innards
+bugfix_unpacked/
+docx_unpacked/
+
+# Large binary docs / data (use wiki/drive instead)
+*.pdf
+*.docx
+*.xlsx
+*.doc
+
+# Windows batch helpers
+*.bat
+
+# Bulky design docs (keep README.md)
+DEFERRED_WORK.md
+DEPLOY.md
+E2E_PROJECT_REVIEW_REPORT.md
+Input Paramerters.md
+QA_E2E_TEST_REPORT.md
+SKILL.md
+SafeStay_Backend_AgentSkills.md
+SafeStay_Backend_V1_Implementation_Plan.md
+SafeStay_V1_MVP_Features_Completed.md
+SafeStay_V1_Testing_Guide.md
+Sercurity-V1.md
+V1_VS_V2_FEATURE_MATRIX.md
+V2_IMPLEMENTATION_GUIDE.md
+V2_QUICK_REFERENCE.md
+WORKING_ON_V2.md
+backend-test-after-frontend-V1.md
+bugfix-context-by-claudecode-1.md
+deployment-guide-railway-1.md
+frontend-V1-claudecode-Cmplt.md
+full detailed report about product-1.md
+plan_text.txt
+sercurity--V1-Cmplt.md
+testing-cmplt-V-1.md
+safestay-backend/bugfix-context-by-claudecode-1.md
+
+# Demo data + generators
+criminals_bulk_upload.csv
+generate_demo2.py
+generate_demo_data.py
