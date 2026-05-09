@@ -80,6 +80,23 @@ export const getRoom = async (id: string): Promise<RoomWithGuest> => {
   return { ...r, guest: activeGuest, currentGuest: activeGuest };
 };
 
+export const addRoom = async (data: { floor: number; roomNumber: string; category: string }): Promise<Room> => {
+  const hotelId = getHotelId();
+  const res = await client.post<{ data: Room }>(`/rooms?hotelId=${hotelId}`, data);
+  return res.data.data;
+};
+
+export const deleteRoom = async (roomId: string): Promise<void> => {
+  const hotelId = getHotelId();
+  await client.delete(`/rooms/${roomId}?hotelId=${hotelId}`);
+};
+
+export const updateRoomStatus = async (roomId: string, status: 'AVAILABLE' | 'MAINTENANCE'): Promise<Room> => {
+  const hotelId = getHotelId();
+  const res = await client.patch<{ data: Room }>(`/rooms/${roomId}/status?hotelId=${hotelId}`, { status });
+  return res.data.data;
+};
+
 // ── Guests ────────────────────────────────────────────────────────────────────
 export const checkInGuest = async (
   data: CheckInRequest & { idPhotoFile?: File; guestPhotoFile?: File }
@@ -129,6 +146,12 @@ export const checkInGuest = async (
 export const getHotelProfile = async (): Promise<any> => {
   const hotelId = getHotelId();
   const res = await client.get<{ data: any }>('/hotels/profile', { params: { hotelId } });
+  return res.data.data;
+};
+
+export const updateHotelProfile = async (data: any): Promise<any> => {
+  const hotelId = getHotelId();
+  const res = await client.patch<{ data: any }>(`/hotels/profile?hotelId=${hotelId}`, data);
   return res.data.data;
 };
 

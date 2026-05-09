@@ -88,6 +88,9 @@ const hotelUpdateSchema = z.object({
   licenseNumber: z.string().optional(),
   geoLat: z.coerce.number().optional(),
   geoLng: z.coerce.number().optional(),
+  totalFloors: z.coerce.number().int().min(1).max(50).optional(),
+  roomsPerFloor: z.coerce.number().int().min(1).max(100).optional(),
+  maxGuestsPerRoom: z.coerce.number().int().min(1).max(20).optional(),
 });
 
 /**
@@ -349,6 +352,9 @@ export const updateHotelProfile = async (req: Request, res: Response, next: Next
         licenseNumber: data.licenseNumber,
         geoLat: data.geoLat,
         geoLng: data.geoLng,
+        ...(data.totalFloors && { totalFloors: data.totalFloors }),
+        ...(data.roomsPerFloor && { roomsPerFloor: data.roomsPerFloor }),
+        ...(data.maxGuestsPerRoom && { maxGuestsPerRoom: data.maxGuestsPerRoom }),
       },
       select: {
         id: true,
@@ -357,6 +363,9 @@ export const updateHotelProfile = async (req: Request, res: Response, next: Next
         contactNumber: true,
         address: true,
         licenseNumber: true,
+        totalFloors: true,
+        roomsPerFloor: true,
+        maxGuestsPerRoom: true,
         updatedAt: true,
       },
     });

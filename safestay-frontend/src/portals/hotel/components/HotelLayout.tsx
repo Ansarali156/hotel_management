@@ -18,6 +18,7 @@ export default function HotelLayout({ children }: { children: React.ReactNode })
     { to: '/hotel/dashboard', icon: 'hotel', label: t('nav.roomOverview') },
     { to: '/hotel/check-in', icon: 'person_add', label: t('nav.checkInGuest') },
     { to: '/hotel/guests', icon: 'groups', label: t('nav.allGuests') },
+    { to: '/hotel/maintenance', icon: 'engineering', label: t('dashboard.maintenance') },
     { to: '/hotel/scan-register', icon: 'document_scanner', label: t('nav.scanRegister'), mobileOnly: true },
     { to: '/hotel/settings', icon: 'settings', label: t('nav.settings') },
   ];

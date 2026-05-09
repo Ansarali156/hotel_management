@@ -12,6 +12,7 @@ import CheckIn from './portals/hotel/pages/CheckIn';
 import GuestList from './portals/hotel/pages/GuestList';
 import ScanRegister from './portals/hotel/pages/ScanRegister';
 import HotelSettings from './portals/hotel/pages/Settings';
+import Maintenance from './portals/hotel/pages/Maintenance';
 
 // Police portal pages
 import PoliceLogin from './portals/police/pages/Login';
@@ -65,6 +66,7 @@ export default function App() {
         <Route path="/hotel/check-in" element={<HotelProtectedRoute><CheckIn /></HotelProtectedRoute>} />
         <Route path="/hotel/guests" element={<HotelProtectedRoute><GuestList /></HotelProtectedRoute>} />
         <Route path="/hotel/scan-register" element={<HotelProtectedRoute><ScanRegister /></HotelProtectedRoute>} />
+        <Route path="/hotel/maintenance" element={<HotelProtectedRoute><Maintenance /></HotelProtectedRoute>} />
         <Route path="/hotel/settings" element={<HotelProtectedRoute><HotelSettings /></HotelProtectedRoute>} />
         {/* Catch-all for /hotel/* */}
         <Route path="/hotel/*" element={<Navigate to="/hotel/dashboard" replace />} />

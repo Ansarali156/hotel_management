@@ -2,10 +2,11 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import HotelLayout from '../components/HotelLayout';
-import { deleteHotel, getHotelProfile } from '../api/hotel.api';
+import { deleteHotel, getHotelProfile, getRooms, addRoom, deleteRoom, updateHotelProfile } from '../api/hotel.api';
 import toast from 'react-hot-toast';
+import type { Room } from '../../../shared/types/hotel.types';
 
-type Tab = 'profile' | 'danger';
+type Tab = 'profile' | 'rooms' | 'danger';
 
 export default function HotelSettings() {
   const navigate = useNavigate();
@@ -16,9 +17,16 @@ export default function HotelSettings() {
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [profileLoading, setProfileLoading] = useState(true);
   const [hotel, setHotel] = useState<Record<string, any>>({});
+  
+  // Room Management State
+  const [rooms, setRooms] = useState<Room[]>([]);
+  const [roomsLoading, setRoomsLoading] = useState(false);
+  const [addLoading, setAddLoading] = useState(false);
+  const [newRoom, setNewRoom] = useState({ floor: '', roomNumber: '', category: '' });
 
   useEffect(() => {
     fetchProfile();
+    fetchRooms();
   }, []);
 
   const fetchProfile = () => {
@@ -29,6 +37,50 @@ export default function HotelSettings() {
       })
       .catch(() => {})
       .finally(() => setProfileLoading(false));
+  };
+
+  const fetchRooms = () => {
+    setRoomsLoading(true);
+    getRooms()
+      .then(setRooms)
+      .catch(() => {})
+      .finally(() => setRoomsLoading(false));
+  };
+
+  const handleAddRoom = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newRoom.floor || !newRoom.roomNumber || !newRoom.category) {
+      toast.error('Please fill all fields');
+      return;
+    }
+    setAddLoading(true);
+    try {
+      await addRoom({
+        floor: Number(newRoom.floor),
+        roomNumber: newRoom.roomNumber,
+        category: newRoom.category
+      });
+      toast.success('Room added successfully');
+      setNewRoom({ floor: '', roomNumber: '', category: '' });
+      fetchRooms();
+      fetchProfile(); // Refresh profile to see updated floor/room counts
+    } catch (err: any) {
+      toast.error(err?.response?.data?.error ?? err?.response?.data?.message ?? 'Failed to add room');
+    } finally {
+      setAddLoading(false);
+    }
+  };
+
+  const handleDeleteRoom = async (roomId: string) => {
+    if (!window.confirm('Are you sure you want to delete this room?')) return;
+    try {
+      await deleteRoom(roomId);
+      toast.success('Room deleted');
+      fetchRooms();
+      fetchProfile();
+    } catch (err: any) {
+      toast.error(err?.response?.data?.error ?? err?.response?.data?.message ?? 'Failed to delete room');
+    }
   };
 
   const handleDelete = async () => {
@@ -52,6 +104,9 @@ export default function HotelSettings() {
     </div>
   );
 
+  // Group rooms by floor for overview
+  const floors = Array.from(new Set(rooms.map(r => r.floor))).sort((a, b) => a - b);
+
   return (
     <HotelLayout>
       {/* Page header */}
@@ -66,6 +121,7 @@ export default function HotelSettings() {
           <nav className="flex lg:flex-col gap-1">
             {[
               { key: 'profile' as Tab, icon: 'business', label: t('settings.hotelProfile') },
+              { key: 'rooms' as Tab, icon: 'door_open', label: 'Room Management' },
               { key: 'danger' as Tab, icon: 'delete_forever', label: t('settings.deleteHotel'), danger: true },
             ].map(({ key, icon, label, danger }) => (
               <button
@@ -121,13 +177,13 @@ export default function HotelSettings() {
                     <p className="text-[10px] font-bold text-slate-300 uppercase tracking-widest py-4">{t('settings.propertyDetails')}</p>
                     <Field label={t('settings.address')} value={hotel.address} />
                     <Field label={t('settings.totalFloors')} value={hotel.totalFloors} />
-                    <Field label={t('settings.totalRooms')} value={(hotel.totalFloors || 0) * (hotel.roomsPerFloor || 0)} />
+                    <Field label={t('settings.totalRooms')} value={rooms.length} />
                     <Field label="Max Guests / Room" value={hotel.maxGuestsPerRoom} />
                     
                     <div className="py-4 border-b border-slate-100 last:border-0 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4">
                       <span className="text-xs font-bold text-slate-400 uppercase tracking-widest w-44 shrink-0">{t('settings.roomCategories')}</span>
                       <div className="flex flex-wrap gap-2">
-                        {(hotel.categories ?? hotel.roomCategories ?? []).map((c: string) => (
+                        {(hotel.roomCategories || []).map((c: string) => (
                           <span key={c} className="px-3 py-1 bg-h-primary/8 text-h-primary text-xs font-bold rounded-full border border-h-primary/10">{c}</span>
                         ))}
                       </div>
@@ -139,6 +195,119 @@ export default function HotelSettings() {
                     <p className="text-xs text-slate-400">
                       {t('settings.updateNote')}
                     </p>
+                  </div>
+                </div>
+              )}
+
+              {/* ── Room Management Tab ───────────────────────── */}
+              {tab === 'rooms' && (
+                <div className="space-y-6">
+                  {/* Add Room Form */}
+                  <div className="bg-surface-container-lowest rounded-xl border border-outline-variant/10 overflow-hidden">
+                    <div className="px-8 py-6 border-b border-slate-100">
+                      <h2 className="text-xl font-bold text-h-primary font-headline">Add Room</h2>
+                    </div>
+                    <form onSubmit={handleAddRoom} className="p-8">
+                      <div className="flex flex-wrap gap-4 items-end">
+                        <div className="flex-1 min-w-[120px] space-y-2">
+                          <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Floor</label>
+                          <input
+                            type="number"
+                            value={newRoom.floor}
+                            onChange={(e) => setNewRoom({ ...newRoom, floor: e.target.value })}
+                            placeholder="Floor"
+                            className="w-full h-11 px-4 rounded-xl border-2 border-slate-100 focus:border-h-primary focus:outline-none text-sm font-medium transition-colors"
+                          />
+                        </div>
+                        <div className="flex-1 min-w-[150px] space-y-2">
+                          <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Room Number</label>
+                          <input
+                            type="text"
+                            value={newRoom.roomNumber}
+                            onChange={(e) => setNewRoom({ ...newRoom, roomNumber: e.target.value })}
+                            placeholder="Room Number"
+                            className="w-full h-11 px-4 rounded-xl border-2 border-slate-100 focus:border-h-primary focus:outline-none text-sm font-medium transition-colors"
+                          />
+                        </div>
+                        <div className="flex-1 min-w-[150px] space-y-2">
+                          <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Category</label>
+                          <select
+                            value={newRoom.category}
+                            onChange={(e) => setNewRoom({ ...newRoom, category: e.target.value })}
+                            className="w-full h-11 px-4 rounded-xl border-2 border-slate-100 focus:border-h-primary focus:outline-none text-sm font-medium transition-colors bg-white"
+                          >
+                            <option value="">Category...</option>
+                            {hotel.roomCategories?.map((c: string) => (
+                              <option key={c} value={c}>{c}</option>
+                            )) || (
+                              <>
+                                <option value="Standard">Standard</option>
+                                <option value="Deluxe">Deluxe</option>
+                                <option value="Suite">Suite</option>
+                              </>
+                            )}
+                          </select>
+                        </div>
+                        <button
+                          type="submit"
+                          disabled={addLoading}
+                          className="h-11 px-6 bg-h-primary text-white text-sm font-bold rounded-xl hover:bg-h-primary/90 transition-all flex items-center gap-2 whitespace-nowrap"
+                        >
+                          {addLoading ? (
+                            <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                          ) : (
+                            <span className="material-symbols-outlined text-[18px]">add</span>
+                          )}
+                          Add Room
+                        </button>
+                      </div>
+                    </form>
+                  </div>
+
+                  {/* Room Overview */}
+                  <div className="bg-surface-container-lowest rounded-xl border border-outline-variant/10 overflow-hidden">
+                    <div className="px-8 py-6 border-b border-slate-100">
+                      <h2 className="text-xl font-bold text-h-primary font-headline">Room Overview</h2>
+                    </div>
+                    <div className="p-8 space-y-8">
+                      {roomsLoading ? (
+                        <div className="flex items-center justify-center py-12">
+                          <div className="w-6 h-6 border-2 border-h-primary border-t-transparent rounded-full animate-spin" />
+                        </div>
+                      ) : (
+                        <>
+                          {floors.map(floor => (
+                            <div key={floor} className="space-y-4">
+                              <h3 className="text-xs font-black text-h-primary uppercase tracking-[0.2em]">FLOOR {floor}</h3>
+                              <div className="flex flex-wrap gap-4">
+                                {rooms.filter(r => r.floor === floor).map(room => (
+                                  <div key={room.id} className="relative group">
+                                    <div className={`w-24 h-24 rounded-xl border flex flex-col items-center justify-center transition-all ${
+                                      room.status === 'OCCUPIED' 
+                                        ? 'bg-red-50 border-red-100 text-red-600' 
+                                        : 'bg-emerald-50 border-emerald-100 text-emerald-600'
+                                    }`}>
+                                      <span className="text-lg font-bold">{room.roomNumber}</span>
+                                      <span className="text-[9px] font-medium opacity-70">{room.category}</span>
+                                      <span className="text-[9px] font-bold mt-1 uppercase tracking-tighter">{room.status}</span>
+                                    </div>
+                                    <button
+                                      onClick={() => handleDeleteRoom(room.id)}
+                                      className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center shadow-md hover:bg-red-600 transition-all scale-90"
+                                    >
+                                      <span className="material-symbols-outlined text-[14px]">close</span>
+                                    </button>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          ))}
+                          {rooms.length === 0 && (
+                            <div className="text-center py-12 text-slate-400 italic">No rooms configured yet.</div>
+                          )}
+                        </>
+                      )}
+                    </div>
                   </div>
                 </div>
               )}

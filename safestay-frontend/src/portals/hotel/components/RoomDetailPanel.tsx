@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
-import { getRoom, checkOutGuest } from '../api/hotel.api';
+import { getRoom, checkOutGuest, updateRoomStatus } from '../api/hotel.api';
 import toast from 'react-hot-toast';
 import { format } from 'date-fns';
 
@@ -47,6 +47,19 @@ export default function RoomDetailPanel({ roomId, onClose, onRefresh }: Props) {
     },
     onError: (err: any) => {
       toast.error(err?.response?.data?.error ?? err?.response?.data?.message ?? 'Checkout failed');
+    },
+  });
+
+  const statusMutation = useMutation({
+    mutationFn: (status: 'AVAILABLE' | 'MAINTENANCE') => updateRoomStatus(roomId, status),
+    onSuccess: () => {
+      toast.success('Room status updated');
+      queryClient.invalidateQueries({ queryKey: ['hotel-rooms'] });
+      queryClient.invalidateQueries({ queryKey: ['hotel-room', roomId] });
+      onRefresh();
+    },
+    onError: (err: any) => {
+      toast.error(err?.response?.data?.error ?? err?.response?.data?.message ?? 'Update failed');
     },
   });
 
@@ -286,8 +299,8 @@ export default function RoomDetailPanel({ roomId, onClose, onRefresh }: Props) {
             </div>
 
             {/* Footer actions */}
-            {room.currentGuest && (
-              <footer className="p-8 bg-surface-container-low flex flex-col gap-3">
+            <footer className="p-8 bg-surface-container-low flex flex-col gap-3">
+              {room.currentGuest ? (
                 <button
                   onClick={() => setShowConfirm(true)}
                   className="w-full h-12 border border-error text-error font-bold rounded-lg hover:bg-error-container/20 transition-colors flex items-center justify-center gap-2"
@@ -295,8 +308,23 @@ export default function RoomDetailPanel({ roomId, onClose, onRefresh }: Props) {
                   <span className="material-symbols-outlined text-[20px]">logout</span>
                   Check Out Guest
                 </button>
-              </footer>
-            )}
+              ) : (
+                <button
+                  disabled={statusMutation.isPending}
+                  onClick={() => statusMutation.mutate(room.status === 'MAINTENANCE' ? 'AVAILABLE' : 'MAINTENANCE')}
+                  className={`w-full h-12 border font-bold rounded-lg transition-colors flex items-center justify-center gap-2 ${
+                    room.status === 'MAINTENANCE'
+                      ? 'border-emerald-600 text-emerald-600 hover:bg-emerald-50'
+                      : 'border-amber-600 text-amber-600 hover:bg-amber-50'
+                  }`}
+                >
+                  <span className="material-symbols-outlined text-[20px]">
+                    {room.status === 'MAINTENANCE' ? 'check_circle' : 'engineering'}
+                  </span>
+                  {room.status === 'MAINTENANCE' ? 'Mark as Available' : 'Put under Maintenance'}
+                </button>
+              )}
+            </footer>
           </>
         )}
 
