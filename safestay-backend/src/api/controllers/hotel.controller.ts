@@ -28,7 +28,7 @@ const hotelRegisterSchema = z
       STRONG_PASSWORD_RE,
       'Password must be 8+ chars with upper, lower, digit and special char'
     ),
-    totalFloors: z.coerce.number().int().min(1).max(100),
+    totalFloors: z.coerce.number().int().min(1).max(50),
 
     // Shape (a) — explicit rooms
     rooms: z
@@ -47,8 +47,8 @@ const hotelRegisterSchema = z
 
     contactNumber: z.string().optional(),
     address: z.string().optional(),
-    licenseNumber: z.string().optional(),
-    maxGuestsPerRoom: z.coerce.number().int().min(1).default(3),
+    licenseNumber: z.string().min(1, "License number is required"),
+    maxGuestsPerRoom: z.coerce.number().int().min(1).max(20).default(20),
     geoLat: z.coerce.number().optional(),
     geoLng: z.coerce.number().optional(),
   })
@@ -432,9 +432,15 @@ export const deleteHotelAccount = async (req: Request, res: Response, next: Next
     const hotel = await prisma.hotel.findUnique({ where: { id: hotelId } });
     if (!hotel || hotel.deletedAt) throw new AppError(404, 'NOT_FOUND', 'Hotel not found');
 
+    const deletedEmail = `${hotel.email}_deleted_${Date.now()}`;
+
     await prisma.hotel.update({
       where: { id: hotelId },
-      data: { deletedAt: new Date(), isActive: false },
+      data: { 
+        email: deletedEmail,
+        deletedAt: new Date(), 
+        isActive: false 
+      },
     });
 
     return sendSuccess(res, null, 'Hotel account deleted successfully');

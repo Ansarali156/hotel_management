@@ -21,7 +21,7 @@ import { scanRegisterImage } from '../../services/registerScanService';
 
 const domesticGuestSchema = z.object({
   fullName: z.string().min(2).max(200),
-  age: z.coerce.number().int().min(1).max(120),
+  age: z.coerce.number().int().min(0).max(100),
   gender: z.enum(['MALE', 'FEMALE', 'OTHER']),
   phoneNumber: z.string().min(6, 'Phone number is too short').max(15, 'Phone number is too long'),
   roomNumber: z.string().min(1),
@@ -519,7 +519,7 @@ export const scanRegisterPage = async (req: Request, res: Response, next: NextFu
 
 const bulkGuestSchema = z.object({
   fullName: z.string().min(2).max(200),
-  age: z.coerce.number().int().min(1).max(120),
+  age: z.coerce.number().int().min(0).max(100),
   gender: z.enum(['MALE', 'FEMALE', 'OTHER']),
   phoneNumber: z.string().min(6).max(15),
   roomNumber: z.string().min(1),

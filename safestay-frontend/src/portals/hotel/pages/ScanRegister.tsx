@@ -168,6 +168,13 @@ export default function ScanRegister() {
 
   const handleUpload = async () => {
     if (!allValid) return;
+    for (const g of guests) {
+      const ageNum = Number(g.age);
+      if (isNaN(ageNum) || ageNum < 0 || ageNum > 100) {
+        toast.error(`Age for ${g.fullName || 'guest'} must be between 0 and 100`);
+        return;
+      }
+    }
     setStep('uploading');
     try {
       const payload = guests.map((g) => ({
@@ -482,7 +489,7 @@ export default function ScanRegister() {
                               Age <span className="text-red-400">*</span>
                             </label>
                             <input
-                              type="number" min={1} max={120}
+                              type="number" min={0} max={100}
                               value={guest.age}
                               onChange={(e) => updateGuest(idx, 'age', e.target.value)}
                               className={`w-full rounded-lg border px-3 py-2 text-sm ${!guest.age ? 'border-red-300 bg-red-50' : 'border-slate-200 bg-white'}`}

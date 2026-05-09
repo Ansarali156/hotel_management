@@ -71,6 +71,11 @@ export default function CriminalDetail() {
   };
 
   const handleSave = () => {
+    const ageNum = Number(form.age);
+    if (form.age !== '' && (isNaN(ageNum) || ageNum < 0 || ageNum > 100)) {
+      toast.error('Age must be between 0 and 100');
+      return;
+    }
     mutation.mutate(form);
   };
 
@@ -283,8 +288,10 @@ export default function CriminalDetail() {
                       <label className="block text-[10px] text-slate-500 uppercase font-bold mb-1.5">Age</label>
                       <input
                         type="number"
+                        min="0"
+                        max="100"
                         value={form.age ?? ''}
-                        onChange={(e) => setForm({ ...form, age: Number(e.target.value) })}
+                        onChange={(e) => setForm({ ...form, age: e.target.value === '' ? '' : Number(e.target.value) })}
                         className="w-full bg-p-surface-container-low border border-p-outline-variant/30 rounded-lg px-4 py-2.5 text-sm focus:outline-none focus:ring-1 focus:ring-p-primary"
                       />
                     </div>

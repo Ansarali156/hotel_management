@@ -121,6 +121,7 @@ export default function CheckIn() {
         guestPhotoFile: guestPhotoFile ?? undefined,
         idPhotoFile: idPhotoFile ?? undefined,
         // Map idNumber to the correct document field based on idType
+        aadhaarNumber: nationality === 'INDIAN' && form.idType === 'Aadhaar Card' ? form.idNumber : form.aadhaarNumber,
         passportNumber: nationality === 'FOREIGN' ? form.idNumber
           : form.idType === 'Passport' ? form.idNumber
           : form.passportNumber,
@@ -159,7 +160,7 @@ export default function CheckIn() {
             ...prev,
             ...(result.aadhaarNumber ? { aadhaarNumber: result.aadhaarNumber, idNumber: result.aadhaarNumber } : {}),
             ...((result.fullName || result.name) && !prev.fullName ? { fullName: (result.fullName || result.name)! } : {}),
-            ...(result.age && result.age > 0 && result.age < 120 ? { age: result.age } : {}),
+            ...(result.age && result.age >= 0 && result.age <= 100 ? { age: result.age } : {}),
             ...(result.gender ? { gender: result.gender } : {}),
             ...(result.address ? { address: result.address } : {}),
             ...(result.phoneNumber ? { phone: result.phoneNumber } : {}),
@@ -168,7 +169,7 @@ export default function CheckIn() {
             const dobStr = result.dob || result.dateOfBirth;
             const year = new Date(dobStr!).getFullYear();
             const age = new Date().getFullYear() - year;
-            if (age > 0 && age < 120) setForm((f) => ({ ...f, age }));
+            if (age >= 0 && age <= 100) setForm((f) => ({ ...f, age }));
           }
           setOcrDone(true);
           toast.success(t('checkIn.aadhaarScanned'));
@@ -217,7 +218,7 @@ export default function CheckIn() {
         if (result.dateOfBirth) {
           const year = new Date(result.dateOfBirth).getFullYear();
           const age = new Date().getFullYear() - year;
-          if (age > 0 && age < 120) setForm((f) => ({ ...f, age }));
+          if (age >= 0 && age <= 100) setForm((f) => ({ ...f, age }));
         }
         setForeignForm((f) => ({
           ...f,
@@ -288,13 +289,17 @@ export default function CheckIn() {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (form.age < 0 || form.age > 100) {
+      toast.error('Age must be between 0 and 100');
+      return;
+    }
     const idError = validateId(form.idType, form.idNumber);
     if (idError) {
       setErrors(prev => ({ ...prev, idNumber: idError }));
       toast.error(idError);
       return;
     }
-    if (!guestPhotoFile) { toast.error('Guest photo is required'); return; }
+    if (!idPhotoFile) { toast.error('ID document photo is required'); return; }
     if (!form.roomNumber) { toast.error('Please select a room'); return; }
     if (nationality === 'FOREIGN') {
       if (!foreignForm.passportNationality) { toast.error('Please enter passport nationality'); return; }
@@ -387,7 +392,7 @@ export default function CheckIn() {
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-1">
                     <label htmlFor="ci-age" className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">{t('checkIn.age')} <span className="text-error">*</span></label>
-                    <input id="ci-age" name="age" required type="number" min={1} max={120} value={form.age} onChange={(e) => set('age', Number(e.target.value))} className="input-underline h-11 px-4 rounded-none" />
+                    <input id="ci-age" name="age" required type="number" min={0} max={100} value={form.age} onChange={(e) => set('age', Number(e.target.value))} className="input-underline h-11 px-4 rounded-none" />
                   </div>
                   <div className="space-y-1">
                     <label htmlFor="ci-gender" className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">{t('checkIn.gender')} <span className="text-error">*</span></label>
@@ -609,23 +614,8 @@ export default function CheckIn() {
                 </div>
               )}
 
-              {/* INDIAN: Aadhaar field */}
-              {nationality === 'INDIAN' && form.idType === 'Aadhaar Card' && (
-                <div className="border-t border-outline-variant/20 pt-6">
-                  <div className="space-y-1">
-                    <label htmlFor="ci-aadhaar" className="text-xs font-bold text-on-surface-variant uppercase tracking-wider">{t('checkIn.aadhaarNumber')}</label>
-                    <input
-                      id="ci-aadhaar"
-                      name="aadhaarNumber"
-                      value={form.aadhaarNumber}
-                      onChange={(e) => set('aadhaarNumber', e.target.value)}
-                      placeholder={t('checkIn.aadhaarPlaceholder')}
-                      maxLength={14}
-                      className="input-underline h-11 px-4 rounded-none md:w-1/2"
-                    />
-                  </div>
-                </div>
-              )}
+              {/* The explicit Aadhaar field was removed to prevent duplicate inputs. 
+                  The generic 'ID Number' field above now handles it automatically. */}
             </section>
 
             {/* Section 3: Stay Details */}
@@ -669,9 +659,9 @@ export default function CheckIn() {
               <div className="bg-surface-container-lowest rounded-xl p-6 border border-h-primary/20 shadow-sm">
                 <h3 className="text-sm font-bold text-h-primary mb-1 font-headline flex items-center gap-2">
                   <span className="material-symbols-outlined text-lg">face</span>
-                  Guest Photo <span className="text-error">*</span>
+                  Guest Photo
                 </h3>
-                <p className="text-[10px] text-slate-400 mb-4">Clear face photo required for identity verification</p>
+                <p className="text-[10px] text-slate-400 mb-4">Clear face photo recommended for identity verification</p>
                 <div
                   onClick={() => guestPhotoRef.current?.click()}
                   className={`aspect-square max-h-40 w-full bg-surface-container-low rounded-lg border-2 border-dashed transition-all flex flex-col items-center justify-center gap-2 cursor-pointer group ${
@@ -698,7 +688,7 @@ export default function CheckIn() {
                 <div className="bg-surface-container-lowest rounded-xl p-6 border border-outline-variant/10 shadow-sm">
                   <h3 className="text-sm font-bold text-h-primary mb-4 font-headline flex items-center gap-2">
                     <span className="material-symbols-outlined text-lg">badge</span>
-                    {t('checkIn.idDocument')}
+                    {t('checkIn.idDocument')} <span className="text-error">*</span>
                   </h3>
                   <div
                     onClick={() => idPhotoRef.current?.click()}
@@ -737,7 +727,7 @@ export default function CheckIn() {
                   {/* Passport Upload */}
                   <div className="bg-surface-container-lowest rounded-xl p-6 border border-outline-variant/10 shadow-sm">
                     <h3 className="text-sm font-bold text-h-primary mb-4 font-headline flex items-center gap-2">
-                      <span className="text-base">🪪</span> {t('checkIn.passportFront')}
+                      <span className="text-base">🪪</span> {t('checkIn.passportFront')} <span className="text-error">*</span>
                     </h3>
                     <div
                       onClick={() => passportPhotoRef.current?.click()}

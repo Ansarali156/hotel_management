@@ -65,7 +65,9 @@ export default function AddCriminal() {
       createCriminal({
         fullName: form.fullName,
         aliases: form.aliases.length ? form.aliases : undefined,
-        age: form.age ? Number(form.age) : undefined,
+        age: form.age && Number(form.age) >= 0 && Number(form.age) <= 100
+          ? Number(form.age)
+          : undefined,
         gender: form.gender || undefined,
         description: form.description || undefined,
         distinguishingMarks: form.distinguishingMarks || undefined,
@@ -108,6 +110,11 @@ export default function AddCriminal() {
     e.preventDefault();
     if (!form.fullName.trim()) { toast.error('Full name is required'); return; }
     if (form.crimeTypes.length === 0) { toast.error('Add at least one crime type'); return; }
+    const ageNum = Number(form.age);
+    if (form.age !== '' && (isNaN(ageNum) || ageNum < 0 || ageNum > 100)) {
+      toast.error('Age must be between 0 and 100');
+      return;
+    }
     const aadhaarCleaned = form.aadhaarNumber.replace(/\s/g, '');
     if (!aadhaarCleaned || !/^\d{12}$/.test(aadhaarCleaned)) {
       toast.error('Aadhaar number is required (12 digits)');
@@ -178,7 +185,7 @@ export default function AddCriminal() {
 
                   <div>
                     <label className="block text-xs font-bold text-p-on-surface-variant mb-1.5 uppercase tracking-wide">Age</label>
-                    <input type="number" value={form.age} onChange={(e) => set('age', e.target.value)} className="input-filled w-full py-3 px-4 rounded-t-lg" />
+                    <input type="number" min="0" max="100" value={form.age} onChange={(e) => set('age', e.target.value)} className="input-filled w-full py-3 px-4 rounded-t-lg" />
                   </div>
                   <div>
                     <label className="block text-xs font-bold text-p-on-surface-variant mb-1.5 uppercase tracking-wide">Gender</label>

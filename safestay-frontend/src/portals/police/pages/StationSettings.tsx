@@ -120,13 +120,26 @@ export default function StationSettings() {
                   <h2 className="text-sm font-bold text-p-on-surface">{t('police.alertDispatchLabel')}</h2>
                   <p className="text-xs text-p-on-surface-variant mt-0.5">Send email + WhatsApp when match score ≥ 70%</p>
                 </div>
-                <button
-                  type="button"
-                  onClick={() => setAlertsEnabled((p) => !p)}
-                  className={`relative w-12 h-6 rounded-full transition-colors ${alertsEnabled ? 'bg-[#1B4332]' : 'bg-p-outline'}`}
-                >
-                  <span className={`absolute top-1 w-4 h-4 bg-white rounded-full shadow transition-transform ${alertsEnabled ? 'translate-x-7' : 'translate-x-1'}`} />
-                </button>
+                <div className="flex items-center gap-3">
+                  <span className={`text-[10px] font-black uppercase tracking-widest ${alertsEnabled ? 'text-[#1B4332]' : 'text-slate-400'}`}>
+                    {alertsEnabled ? 'Active' : 'Disabled'}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setAlertsEnabled((p) => !p)}
+                    className={`relative w-14 h-7 rounded-full transition-all duration-300 shadow-inner flex items-center ${
+                      alertsEnabled ? 'bg-[#1B4332]' : 'bg-slate-200'
+                    }`}
+                  >
+                    <div
+                      className={`absolute left-1 w-5 h-5 bg-white rounded-full shadow-md transition-transform duration-300 ${
+                        alertsEnabled ? 'translate-x-7' : 'translate-x-0'
+                      } flex items-center justify-center`}
+                    >
+                      <div className={`w-1 h-1 rounded-full ${alertsEnabled ? 'bg-[#1B4332]' : 'bg-slate-300'}`} />
+                    </div>
+                  </button>
+                </div>
               </div>
             </section>
 

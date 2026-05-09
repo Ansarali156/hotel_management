@@ -15,20 +15,26 @@ export default function HotelSettings() {
   const [deleteLoading, setDeleteLoading] = useState(false);
   const [deleteConfirmText, setDeleteConfirmText] = useState('');
   const [profileLoading, setProfileLoading] = useState(true);
-
   const [hotel, setHotel] = useState<Record<string, any>>({});
 
   useEffect(() => {
+    fetchProfile();
+  }, []);
+
+  const fetchProfile = () => {
+    setProfileLoading(true);
     getHotelProfile()
-      .then((data) => setHotel(data))
+      .then((data) => {
+        setHotel(data);
+      })
       .catch(() => {})
       .finally(() => setProfileLoading(false));
-  }, []);
+  };
 
   const handleDelete = async () => {
     setDeleteLoading(true);
     try {
-      await deleteHotel(); // clears sessionStorage internally
+      await deleteHotel(); 
       toast.success('Hotel account deleted successfully.');
       navigate('/hotel/login');
     } catch (err: any) {
@@ -84,86 +90,90 @@ export default function HotelSettings() {
 
         {/* ── Content ───────────────────────────────────────── */}
         <div className="flex-1 min-w-0">
-
-          {/* ── Profile Tab ───────────────────────────────── */}
-          {tab === 'profile' && (
-            <div className="bg-surface-container-lowest rounded-xl border border-outline-variant/10 overflow-hidden">
-              {/* Header */}
-              <div className="px-8 py-6 border-b border-slate-100 flex items-center gap-4">
-                <div className="w-14 h-14 rounded-full bg-h-primary-container flex items-center justify-center">
-                  <span className="material-symbols-outlined text-white text-2xl icon-fill">hotel</span>
-                </div>
-                <div>
-                  <h2 className="text-xl font-bold text-h-primary font-headline">{hotel.name || 'Your Hotel'}</h2>
-                  <p className="text-xs text-slate-400 font-medium mt-0.5">{hotel.email}</p>
-                </div>
-              </div>
-
-              {/* Fields */}
-              <div className="px-8 py-2">
-                <p className="text-[10px] font-bold text-slate-300 uppercase tracking-widest py-4">{t('settings.accountInfo')}</p>
-                <Field label={t('settings.hotelName')} value={hotel.name} />
-                <Field label={t('settings.email')} value={hotel.email} />
-                <Field label={t('settings.phone')} value={hotel.phone} />
-                <Field label={t('settings.licenseNumber')} value={hotel.licenseNumber} />
-              </div>
-
-              <div className="px-8 py-2">
-                <p className="text-[10px] font-bold text-slate-300 uppercase tracking-widest py-4">{t('settings.propertyDetails')}</p>
-                <Field label={t('settings.address')} value={hotel.address} />
-                <Field label={t('settings.totalFloors')} value={hotel.totalFloors} />
-                <Field label={t('settings.totalRooms')} value={hotel.roomsPerFloor} />
-                <Field label="Max Guests / Room" value={hotel.maxGuestsPerRoom} />
-                <div className="py-4 border-b border-slate-100 last:border-0 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4">
-                  <span className="text-xs font-bold text-slate-400 uppercase tracking-widest w-44 shrink-0">{t('settings.roomCategories')}</span>
-                  <div className="flex flex-wrap gap-2">
-                    {(hotel.categories ?? hotel.roomCategories ?? []).length > 0
-                      ? (hotel.categories ?? hotel.roomCategories).map((c: string) => (
-                          <span key={c} className="px-3 py-1 bg-h-primary/8 text-h-primary text-xs font-bold rounded-full border border-h-primary/10">{c}</span>
-                        ))
-                      : <span className="text-slate-300 italic text-sm">Not provided</span>}
-                  </div>
-                </div>
-                <Field label="Hotel ID" value={hotel.id} />
-              </div>
-
-              <div className="px-8 py-6 bg-slate-50 border-t border-slate-100">
-                <p className="text-xs text-slate-400">
-                  {t('settings.updateNote')}
-                </p>
-              </div>
+          {profileLoading ? (
+            <div className="flex items-center justify-center py-20 bg-white rounded-xl border border-slate-100">
+              <div className="w-8 h-8 border-2 border-h-primary border-t-transparent rounded-full animate-spin" />
             </div>
-          )}
+          ) : (
+            <>
+              {/* ── Profile Tab ───────────────────────────────── */}
+              {tab === 'profile' && (
+                <div className="bg-surface-container-lowest rounded-xl border border-outline-variant/10 overflow-hidden">
+                  <div className="px-8 py-6 border-b border-slate-100 flex items-center gap-4">
+                    <div className="w-14 h-14 rounded-full bg-h-primary-container flex items-center justify-center">
+                      <span className="material-symbols-outlined text-white text-2xl icon-fill">hotel</span>
+                    </div>
+                    <div>
+                      <h2 className="text-xl font-bold text-h-primary font-headline">{hotel.name || 'Your Hotel'}</h2>
+                      <p className="text-xs text-slate-400 font-medium mt-0.5">{hotel.email}</p>
+                    </div>
+                  </div>
 
-          {/* ── Danger / Delete Tab ───────────────────────── */}
-          {tab === 'danger' && (
-            <div className="space-y-4">
-              <div className="bg-surface-container-lowest rounded-xl border border-red-100 overflow-hidden">
-                <div className="px-8 py-6 border-b border-red-50">
-                  <h2 className="text-lg font-bold text-red-600 font-headline flex items-center gap-2">
-                    <span className="material-symbols-outlined text-[20px] icon-fill">warning</span>
-                    {t('settings.dangerZone')}
-                  </h2>
-                  <p className="text-sm text-slate-400 mt-1">{t('settings.dangerZoneText')}</p>
-                </div>
+                  <div className="px-8 py-2">
+                    <p className="text-[10px] font-bold text-slate-300 uppercase tracking-widest py-4">{t('settings.accountInfo')}</p>
+                    <Field label={t('settings.hotelName')} value={hotel.name} />
+                    <Field label={t('settings.email')} value={hotel.email} />
+                    <Field label={t('settings.phone')} value={hotel.contactNumber} />
+                    <Field label={t('settings.licenseNumber')} value={hotel.licenseNumber} />
+                  </div>
 
-                <div className="px-8 py-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
-                  <div>
-                    <p className="text-sm font-bold text-on-surface">{t('settings.deleteAccount')}</p>
-                    <p className="text-xs text-slate-400 mt-1 max-w-md">
-                      Permanently delete <span className="font-semibold text-slate-600">{hotel.name}</span> and all associated data — rooms, guest records, and check-in history. This cannot be undone.
+                  <div className="px-8 py-2">
+                    <p className="text-[10px] font-bold text-slate-300 uppercase tracking-widest py-4">{t('settings.propertyDetails')}</p>
+                    <Field label={t('settings.address')} value={hotel.address} />
+                    <Field label={t('settings.totalFloors')} value={hotel.totalFloors} />
+                    <Field label={t('settings.totalRooms')} value={(hotel.totalFloors || 0) * (hotel.roomsPerFloor || 0)} />
+                    <Field label="Max Guests / Room" value={hotel.maxGuestsPerRoom} />
+                    
+                    <div className="py-4 border-b border-slate-100 last:border-0 flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-4">
+                      <span className="text-xs font-bold text-slate-400 uppercase tracking-widest w-44 shrink-0">{t('settings.roomCategories')}</span>
+                      <div className="flex flex-wrap gap-2">
+                        {(hotel.categories ?? hotel.roomCategories ?? []).map((c: string) => (
+                          <span key={c} className="px-3 py-1 bg-h-primary/8 text-h-primary text-xs font-bold rounded-full border border-h-primary/10">{c}</span>
+                        ))}
+                      </div>
+                    </div>
+                    <Field label="Hotel ID" value={hotel.id} />
+                  </div>
+
+                  <div className="px-8 py-6 bg-slate-50 border-t border-slate-100">
+                    <p className="text-xs text-slate-400">
+                      {t('settings.updateNote')}
                     </p>
                   </div>
-                  <button
-                    onClick={() => { setDeleteConfirmText(''); setShowDeleteDialog(true); }}
-                    className="shrink-0 px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white text-sm font-bold rounded-lg transition-all flex items-center gap-2"
-                  >
-                    <span className="material-symbols-outlined text-[16px]">delete_forever</span>
-                    {t('settings.deleteBtn')}
-                  </button>
                 </div>
-              </div>
-            </div>
+              )}
+
+              {/* ── Danger / Delete Tab ───────────────────────── */}
+              {tab === 'danger' && (
+                <div className="space-y-4">
+                  <div className="bg-surface-container-lowest rounded-xl border border-red-100 overflow-hidden">
+                    <div className="px-8 py-6 border-b border-red-50">
+                      <h2 className="text-lg font-bold text-red-600 font-headline flex items-center gap-2">
+                        <span className="material-symbols-outlined text-[20px] icon-fill">warning</span>
+                        {t('settings.dangerZone')}
+                      </h2>
+                      <p className="text-sm text-slate-400 mt-1">{t('settings.dangerZoneText')}</p>
+                    </div>
+
+                    <div className="px-8 py-6 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                      <div>
+                        <p className="text-sm font-bold text-on-surface">{t('settings.deleteAccount')}</p>
+                        <p className="text-xs text-slate-400 mt-1 max-w-md">
+                          Permanently delete <span className="font-semibold text-slate-600">{hotel.name}</span> and all associated data. This cannot be undone.
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => { setDeleteConfirmText(''); setShowDeleteDialog(true); }}
+                        className="shrink-0 px-5 py-2.5 bg-red-600 hover:bg-red-700 text-white text-sm font-bold rounded-lg transition-all flex items-center gap-2"
+                      >
+                        <span className="material-symbols-outlined text-[16px]">delete_forever</span>
+                        {t('settings.deleteBtn')}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>
@@ -171,64 +181,14 @@ export default function HotelSettings() {
       {/* ── Delete Confirmation Dialog ─────────────────────── */}
       {showDeleteDialog && (
         <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-          {/* Backdrop */}
-          <div
-            className="absolute inset-0 bg-black/40 backdrop-blur-sm"
-            onClick={() => { if (!deleteLoading) { setShowDeleteDialog(false); setDeleteConfirmText(''); } }}
-          />
-
-          {/* Card */}
+          <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => { if (!deleteLoading) setShowDeleteDialog(false); }} />
           <div className="relative bg-white rounded-2xl shadow-2xl w-full max-w-md p-8 flex flex-col gap-6">
-            {/* Icon */}
-            <div className="flex justify-center">
-              <div className="w-16 h-16 rounded-full bg-red-100 flex items-center justify-center">
-                <span className="material-symbols-outlined text-red-600 text-3xl icon-fill">delete_forever</span>
-              </div>
-            </div>
-
-            {/* Title */}
             <div className="text-center">
               <h3 className="text-xl font-bold text-on-surface font-headline">{t('settings.deleteModalTitle')}</h3>
               <p className="text-sm text-slate-400 mt-2">{t('settings.deleteModalAbout')}</p>
             </div>
-
-            {/* Hotel summary */}
-            <div className="bg-red-50 rounded-xl p-5 border border-red-100 space-y-2">
-              <div className="flex items-center gap-3">
-                <span className="material-symbols-outlined text-red-400 text-[18px] icon-fill">hotel</span>
-                <span className="text-sm font-bold text-on-surface">{hotel.name}</span>
-              </div>
-              <div className="flex items-center gap-3">
-                <span className="material-symbols-outlined text-red-400 text-[18px]">mail</span>
-                <span className="text-sm text-slate-500">{hotel.email}</span>
-              </div>
-              {hotel.address && (
-                <div className="flex items-center gap-3">
-                  <span className="material-symbols-outlined text-red-400 text-[18px]">location_on</span>
-                  <span className="text-sm text-slate-500 truncate">{hotel.address}</span>
-                </div>
-              )}
-              <div className="flex items-center gap-3">
-                <span className="material-symbols-outlined text-red-400 text-[18px]">meeting_room</span>
-                <span className="text-sm text-slate-500">
-                  {(hotel.totalFloors ?? 0) * (hotel.roomsPerFloor ?? 0)} rooms across {hotel.totalFloors ?? 0} floors
-                </span>
-              </div>
-            </div>
-
-            {/* Warning notice */}
-            <div className="bg-amber-50 border border-amber-200 rounded-lg px-4 py-3 flex gap-3">
-              <span className="material-symbols-outlined text-amber-600 text-[18px] icon-fill shrink-0 mt-0.5">error</span>
-              <p className="text-xs text-amber-700 font-medium leading-relaxed">
-                {t('settings.deleteModalWarning')}
-              </p>
-            </div>
-
-            {/* Text confirmation */}
             <div className="space-y-2">
-              <p className="text-xs text-slate-500 font-medium">
-                {t('settings.deleteModalType')}
-              </p>
+              <p className="text-xs text-slate-500 font-medium">{t('settings.deleteModalType')}</p>
               <input
                 type="text"
                 value={deleteConfirmText}
@@ -236,17 +196,14 @@ export default function HotelSettings() {
                 placeholder="DELETE MY ACCOUNT"
                 disabled={deleteLoading}
                 className="w-full h-11 px-4 rounded-xl border-2 border-slate-200 focus:border-red-400 focus:outline-none text-sm font-mono transition-colors disabled:opacity-50"
-                autoComplete="off"
               />
             </div>
-
-            {/* Buttons */}
             <div className="grid grid-cols-2 gap-3">
               <button
                 type="button"
                 disabled={deleteLoading}
-                onClick={() => { setShowDeleteDialog(false); setDeleteConfirmText(''); }}
-                className="h-12 rounded-xl border-2 border-slate-200 text-slate-600 font-bold text-sm hover:bg-slate-50 transition-all disabled:opacity-50"
+                onClick={() => setShowDeleteDialog(false)}
+                className="h-12 rounded-xl border-2 border-slate-200 text-slate-600 font-bold text-sm"
               >
                 {t('settings.noKeepIt')}
               </button>
@@ -254,13 +211,9 @@ export default function HotelSettings() {
                 type="button"
                 disabled={deleteLoading || deleteConfirmText !== 'DELETE MY ACCOUNT'}
                 onClick={handleDelete}
-                className="h-12 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-sm transition-all disabled:opacity-40 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                className="h-12 rounded-xl bg-red-600 hover:bg-red-700 text-white font-bold text-sm flex items-center justify-center"
               >
-                {deleteLoading ? (
-                  <><div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> Deleting…</>
-                ) : (
-                  <><span className="material-symbols-outlined text-[16px]">delete_forever</span> {t('settings.yesDelete')}</>
-                )}
+                {deleteLoading ? <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" /> : t('settings.yesDelete')}
               </button>
             </div>
           </div>

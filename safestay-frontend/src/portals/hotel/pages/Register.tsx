@@ -32,11 +32,11 @@ export default function HotelRegister() {
   const [contactNumber, setContactNumber] = useState('');
   const [address, setAddress] = useState('');
   const [licenseNumber, setLicenseNumber] = useState('');
-  const [maxGuestsPerRoom, setMaxGuestsPerRoom] = useState(3);
+  const [maxGuestsPerRoom, setMaxGuestsPerRoom] = useState<number | ''>(3);
 
   // Wizard state
   const [wizardStep, setWizardStep] = useState<WizardStep>('floors');
-  const [totalFloors, setTotalFloors] = useState(1);
+  const [totalFloors, setTotalFloors] = useState<number | ''>(1);
   const [floorRoomInputs, setFloorRoomInputs] = useState<Record<number, string>>({});
   const [rooms, setRooms] = useState<Room[]>([]);
   const [selectedCategories, setSelectedCategories] = useState<string[]>([]);
@@ -48,11 +48,31 @@ export default function HotelRegister() {
   const addRoom = (floor: number) => {
     const input = (floorRoomInputs[floor] ?? '').trim();
     if (!input) return;
-    if (rooms.find((r) => r.floor === floor && r.roomNumber === input)) {
-      toast.error(`Room ${input} already added on Floor ${floor}`);
-      return;
-    }
-    setRooms((prev) => [...prev, { floor, roomNumber: input, category: '' }]);
+
+    // Split by commas or spaces and filter out any empty strings
+    const newRoomNumbers = input.split(/[\s,]+/).filter(Boolean);
+
+    if (newRoomNumbers.length === 0) return;
+
+    setRooms((prev) => {
+      const updatedRooms = [...prev];
+      let duplicateCount = 0;
+
+      newRoomNumbers.forEach((roomNum) => {
+        if (updatedRooms.find((r) => r.floor === floor && r.roomNumber === roomNum)) {
+          duplicateCount++;
+        } else {
+          updatedRooms.push({ floor, roomNumber: roomNum, category: '' });
+        }
+      });
+
+      if (duplicateCount > 0) {
+        toast.error(`${duplicateCount} room(s) skipped (already added on Floor ${floor})`);
+      }
+
+      return updatedRooms;
+    });
+
     setFloorRoomInputs((prev) => ({ ...prev, [floor]: '' }));
   };
 
@@ -92,13 +112,16 @@ export default function HotelRegister() {
     return true;
   };
 
-  const canGoToRooms = () => totalFloors >= 1;
+  const canGoToRooms = () => typeof totalFloors === 'number' && totalFloors >= 1;
   const canGoToCategories = () => rooms.length > 0;
   const canSubmit = () => {
     if (!hotelName.trim()) return false;
     if (!email.trim()) return false;
     if (!STRONG_PASSWORD_RE.test(password)) return false;
     if (password !== confirmPassword) return false;
+    if (!contactNumber.trim()) return false;
+    if (!address.trim()) return false;
+    if (!licenseNumber.trim()) return false;
     if (!wizardComplete()) return false;
     return true;
   };
@@ -126,12 +149,12 @@ export default function HotelRegister() {
         hotelName: hotelName.trim(),
         email: email.trim(),
         password,
-        totalFloors,
+        totalFloors: Number(totalFloors) || 1,
         rooms,
         contactNumber: contactNumber.trim() || undefined,
         address: address.trim() || undefined,
         licenseNumber: licenseNumber.trim() || undefined,
-        maxGuestsPerRoom,
+        maxGuestsPerRoom: Number(maxGuestsPerRoom) || 3,
       });
 
       // Auto-login after registration — persist the refresh token alongside
@@ -220,7 +243,9 @@ export default function HotelRegister() {
               <h2 className="text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-4">Account Credentials</h2>
               <div className="space-y-4">
                 <div>
-                  <label className="block text-xs font-semibold text-on-surface-variant mb-1">Hotel Name</label>
+                  <label className="block text-xs font-semibold text-on-surface-variant mb-1">
+                    Hotel Name <span className="text-red-500">*</span>
+                  </label>
                   <input
                     type="text"
                     value={hotelName}
@@ -230,7 +255,9 @@ export default function HotelRegister() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-on-surface-variant mb-1">Email Address</label>
+                  <label className="block text-xs font-semibold text-on-surface-variant mb-1">
+                    Email Address <span className="text-red-500">*</span>
+                  </label>
                   <input
                     type="email"
                     value={email}
@@ -241,7 +268,9 @@ export default function HotelRegister() {
                 </div>
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-semibold text-on-surface-variant mb-1">Password</label>
+                    <label className="block text-xs font-semibold text-on-surface-variant mb-1">
+                      Password <span className="text-red-500">*</span>
+                    </label>
                     <div className="relative">
                       <input
                         type={showPassword ? 'text' : 'password'}
@@ -256,7 +285,9 @@ export default function HotelRegister() {
                     </div>
                   </div>
                   <div>
-                    <label className="block text-xs font-semibold text-on-surface-variant mb-1">Confirm Password</label>
+                    <label className="block text-xs font-semibold text-on-surface-variant mb-1">
+                      Confirm Password <span className="text-red-500">*</span>
+                    </label>
                     <input
                       type={showPassword ? 'text' : 'password'}
                       value={confirmPassword}
@@ -314,9 +345,17 @@ export default function HotelRegister() {
                     <input
                       type="number"
                       min={1}
-                      max={100}
+                      max={50}
                       value={totalFloors}
-                      onChange={(e) => setTotalFloors(Math.max(1, parseInt(e.target.value) || 1))}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (val === '') {
+                          setTotalFloors('');
+                        } else {
+                          const num = parseInt(val);
+                          setTotalFloors(num > 50 ? 50 : num);
+                        }
+                      }}
                       className="w-32 px-3 py-2 rounded-lg border border-outline-variant/40 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B4332]/30"
                     />
                     <div className="mt-4">
@@ -338,7 +377,7 @@ export default function HotelRegister() {
                   <div>
                     <p className="text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-3">Step 2: Add Room Numbers</p>
                     <div className="space-y-4">
-                      {Array.from({ length: totalFloors }, (_, i) => i + 1).map((floor) => {
+                      {Array.from({ length: Number(totalFloors) || 0 }, (_, i) => i + 1).map((floor) => {
                         const floorRooms = rooms.filter((r) => r.floor === floor);
                         return (
                           <div key={floor}>
@@ -352,7 +391,7 @@ export default function HotelRegister() {
                                 value={floorRoomInputs[floor] ?? ''}
                                 onChange={(e) => setFloorRoomInputs((prev) => ({ ...prev, [floor]: e.target.value }))}
                                 onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addRoom(floor))}
-                                placeholder={`e.g. ${floor}01, then Enter`}
+                                placeholder={`e.g. ${floor}01, ${floor}02, ${floor}03...`}
                                 className="flex-1 px-3 py-2 rounded-lg border border-outline-variant/40 text-sm focus:outline-none focus:ring-2 focus:ring-[#1B4332]/30"
                               />
                               <button
@@ -420,11 +459,10 @@ export default function HotelRegister() {
                           key={cat}
                           type="button"
                           onClick={() => toggleCategory(cat)}
-                          className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all ${
-                            selectedCategories.includes(cat)
+                          className={`px-3 py-1.5 rounded-lg text-xs font-bold border transition-all ${selectedCategories.includes(cat)
                               ? 'bg-[#1B4332] text-white border-[#1B4332]'
                               : 'bg-white text-on-surface-variant border-outline-variant/40 hover:border-[#1B4332]/40'
-                          }`}
+                            }`}
                         >
                           {selectedCategories.includes(cat) && '✓ '}{cat}
                         </button>
@@ -452,11 +490,10 @@ export default function HotelRegister() {
                                       updated[idx].category = room.category === cat ? '' : cat;
                                       setRooms(updated);
                                     }}
-                                    className={`px-2 py-1 text-[10px] font-bold rounded transition-all ${
-                                      room.category === cat
+                                    className={`px-2 py-1 text-[10px] font-bold rounded transition-all ${room.category === cat
                                         ? 'bg-[#1B4332] text-white'
                                         : 'bg-[#F4F6F8] text-on-surface-variant border border-outline-variant/40 hover:border-[#1B4332]/40'
-                                    }`}
+                                      }`}
                                   >
                                     {cat}
                                   </button>
@@ -493,11 +530,13 @@ export default function HotelRegister() {
 
             {/* ── Hotel Details (Optional) ──────────────────────────────── */}
             <section>
-              <h2 className="text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-4">Hotel Details (Optional)</h2>
+              <h2 className="text-xs font-bold text-on-surface-variant uppercase tracking-wider mb-4">Hotel Details</h2>
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs font-semibold text-on-surface-variant mb-1">Contact Number</label>
+                    <label className="block text-xs font-semibold text-on-surface-variant mb-1">
+                      Contact Number <span className="text-red-500">*</span>
+                    </label>
                     <div className="flex">
                       <span className="px-2.5 py-2.5 bg-[#F4F6F8] border border-r-0 border-outline-variant/40 rounded-l-lg text-xs text-on-surface-variant">+91</span>
                       <input
@@ -516,13 +555,23 @@ export default function HotelRegister() {
                       min={1}
                       max={20}
                       value={maxGuestsPerRoom}
-                      onChange={(e) => setMaxGuestsPerRoom(parseInt(e.target.value) || 3)}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        if (val === '') {
+                          setMaxGuestsPerRoom('');
+                        } else {
+                          const num = parseInt(val);
+                          setMaxGuestsPerRoom(num > 6 ? 6 : num);
+                        }
+                      }}
                       className="w-full px-3 py-2.5 rounded-lg border border-outline-variant/40 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-[#1B4332]/30"
                     />
                   </div>
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-on-surface-variant mb-1">Hotel Address</label>
+                  <label className="block text-xs font-semibold text-on-surface-variant mb-1">
+                    Hotel Address <span className="text-red-500">*</span>
+                  </label>
                   <input
                     type="text"
                     value={address}
@@ -532,7 +581,9 @@ export default function HotelRegister() {
                   />
                 </div>
                 <div>
-                  <label className="block text-xs font-semibold text-on-surface-variant mb-1">License Number</label>
+                  <label className="block text-xs font-semibold text-on-surface-variant mb-1">
+                    License Number <span className="text-red-500">*</span>
+                  </label>
                   <input
                     type="text"
                     value={licenseNumber}
